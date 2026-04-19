@@ -8,19 +8,8 @@
   },
   "routes": [
     {
-      "route": "/admin",
-      "rewrite": "/index.html",
-      "allowedRoles": ["authenticated"]
-    },
-    {
       "route": "/api/admin/*",
       "allowedRoles": ["authenticated"]
     }
-  ],
-  "responseOverrides": {
-    "401": {
-      "redirect": "/.auth/login/github",
-      "statusCode": 302
-    }
-  }
+  ]
 }

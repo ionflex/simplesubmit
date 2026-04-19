@@ -16,6 +16,24 @@ public sealed class ModerationFunctions
 {
     private const int DefaultPurgeAgeDays = 30;
 
+    [Function("AdminWhoAmI")]
+    public IResult WhoAmI
+    (
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "admin/whoami")] HttpRequest req
+    )
+    {
+        var isAdmin = admin.IsAdmin(req.HttpContext);
+        var principalHeader = req.Headers.TryGetValue("x-ms-client-principal", out var values)
+            ? values.ToString()
+            : null;
+        return Results.Ok(new
+        {
+            IsAdmin = isAdmin,
+            HasPrincipalHeader = !string.IsNullOrEmpty(principalHeader),
+            AdminUserIdConfigured = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ADMIN_GITHUB_USER_ID")),
+        });
+    }
+
     [Function("ListPending")]
     public async Task<IResult> ListPendingAsync
     (

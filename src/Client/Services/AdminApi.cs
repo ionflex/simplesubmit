@@ -26,23 +26,25 @@ public sealed class AdminApi(HttpClient http)
 
     public async Task<Suggestion?> ApproveAsync(Guid id, CancellationToken ct = default)
     {
-        var response = await http.PostAsync($"api/admin/suggestions/{id}/approve", content: null, ct);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<Suggestion>(ct);
+        return await PostNoBodyJsonAsync<Suggestion>($"api/admin/suggestions/{id}/approve", ct);
     }
 
     public async Task<Suggestion?> RejectAsync(Guid id, CancellationToken ct = default)
     {
-        var response = await http.PostAsync($"api/admin/suggestions/{id}/reject", content: null, ct);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<Suggestion>(ct);
+        return await PostNoBodyJsonAsync<Suggestion>($"api/admin/suggestions/{id}/reject", ct);
     }
 
     public async Task<int> PurgeRejectedAsync(int olderThanDays, CancellationToken ct = default)
     {
-        var response = await http.PostAsync($"api/admin/purge-rejected?olderThanDays={olderThanDays}", content: null, ct);
-        response.EnsureSuccessStatusCode();
-        var body = await response.Content.ReadFromJsonAsync<PurgeRejectedResponse>(ct);
+        var body = await PostNoBodyJsonAsync<PurgeRejectedResponse>($"api/admin/purge-rejected?olderThanDays={olderThanDays}", ct);
         return body?.PurgedCount ?? 0;
+    }
+
+    private async Task<T?> PostNoBodyJsonAsync<T>(string url, CancellationToken ct)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, url);
+        using var response = await http.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<T>(ct);
     }
 }
