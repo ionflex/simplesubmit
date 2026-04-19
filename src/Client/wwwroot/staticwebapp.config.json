@@ -5,11 +5,5 @@
   },
   "mimeTypes": {
     ".wasm": "application/wasm"
-  },
-  "routes": [
-    {
-      "route": "/api/admin/*",
-      "allowedRoles": ["authenticated"]
-    }
-  ]
+  }
 }
