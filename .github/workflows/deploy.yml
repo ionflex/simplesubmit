@@ -50,16 +50,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Publish client
-        run: dotnet publish src/Client/SimpleSubmit.Client.csproj -c Release -o publish/client
-
-      - name: Publish api
-        run: dotnet publish src/Api/SimpleSubmit.Api.csproj -c Release -o publish/api
-
       - uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -81,10 +71,6 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ steps.swa.outputs.token }}
           action: upload
-          app_location: publish/client/wwwroot
-          api_location: publish/api
-          output_location: ''
-          skip_app_build: true
-          skip_api_build: true
-          api_language: dotnetisolated
-          api_version: '8.0'
+          app_location: src/Client
+          api_location: src/Api
+          output_location: wwwroot
