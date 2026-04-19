@@ -5,5 +5,11 @@
   },
   "mimeTypes": {
     ".wasm": "application/wasm"
-  }
+  },
+  "routes": [
+    {
+      "route": "/api/mod/*",
+      "allowedRoles": ["authenticated"]
+    }
+  ]
 }

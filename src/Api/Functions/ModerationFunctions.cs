@@ -57,7 +57,7 @@ public sealed class ModerationFunctions
     [Function("ListPending")]
     public async Task<IResult> ListPendingAsync
     (
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "admin/suggestions/pending")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "mod/suggestions/pending")] HttpRequest req,
         CancellationToken ct
     )
     {
@@ -73,7 +73,7 @@ public sealed class ModerationFunctions
     [Function("ApproveSuggestion")]
     public async Task<IResult> ApproveAsync
     (
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "admin/suggestions/{id:guid}/approve")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "mod/suggestions/{id:guid}/approve")] HttpRequest req,
         Guid id,
         CancellationToken ct
     )
@@ -96,7 +96,7 @@ public sealed class ModerationFunctions
     [Function("RejectSuggestion")]
     public async Task<IResult> RejectAsync
     (
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "admin/suggestions/{id:guid}/reject")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "mod/suggestions/{id:guid}/reject")] HttpRequest req,
         Guid id,
         CancellationToken ct
     )
@@ -119,7 +119,7 @@ public sealed class ModerationFunctions
     [Function("PurgeRejected")]
     public async Task<IResult> PurgeRejectedAsync
     (
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "admin/purge-rejected")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "mod/purge-rejected")] HttpRequest req,
         CancellationToken ct
     )
     {
