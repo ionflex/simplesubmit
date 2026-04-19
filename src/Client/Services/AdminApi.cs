@@ -10,7 +10,7 @@ public sealed class AdminApi(HttpClient http)
 
     public async Task<(Outcome outcome, IReadOnlyList<Suggestion> items)> ListPendingAsync(CancellationToken ct = default)
     {
-        var response = await http.GetAsync("api/suggestions/pending", ct);
+        var response = await http.GetAsync("api/admin/suggestions/pending", ct);
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             return (Outcome.Unauthorized, []);
@@ -26,14 +26,14 @@ public sealed class AdminApi(HttpClient http)
 
     public async Task<Suggestion?> ApproveAsync(Guid id, CancellationToken ct = default)
     {
-        var response = await http.PostAsync($"api/suggestions/{id}/approve", content: null, ct);
+        var response = await http.PostAsync($"api/admin/suggestions/{id}/approve", content: null, ct);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<Suggestion>(ct);
     }
 
     public async Task<Suggestion?> RejectAsync(Guid id, CancellationToken ct = default)
     {
-        var response = await http.PostAsync($"api/suggestions/{id}/reject", content: null, ct);
+        var response = await http.PostAsync($"api/admin/suggestions/{id}/reject", content: null, ct);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<Suggestion>(ct);
     }

@@ -13,20 +13,6 @@
       "allowedRoles": ["authenticated"]
     },
     {
-      "route": "/api/suggestions/pending",
-      "allowedRoles": ["authenticated"]
-    },
-    {
-      "route": "/api/suggestions/*/approve",
-      "methods": ["POST"],
-      "allowedRoles": ["authenticated"]
-    },
-    {
-      "route": "/api/suggestions/*/reject",
-      "methods": ["POST"],
-      "allowedRoles": ["authenticated"]
-    },
-    {
       "route": "/api/admin/*",
       "allowedRoles": ["authenticated"]
     }
