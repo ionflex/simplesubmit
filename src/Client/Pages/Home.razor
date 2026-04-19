@@ -1,0 +1,105 @@
+@page "/"
+@inject SuggestionsApi Api
+
+<PageTitle>SimpleSubmit</PageTitle>
+
+<h1>Suggestions</h1>
+
+<EditForm Model="form" OnValidSubmit="SubmitAsync" FormName="submit-suggestion">
+    <div class="mb-2">
+        <label for="text" class="form-label">Suggestion</label>
+        <textarea id="text" class="form-control" rows="3" maxlength="500"
+                  @bind="form.Text" @bind:event="oninput" disabled="@busy"></textarea>
+        <div class="form-text">@(form.Text?.Length ?? 0) / 500</div>
+    </div>
+    <div class="mb-2">
+        <label for="author" class="form-label">Name (optional)</label>
+        <input id="author" class="form-control" maxlength="60"
+               @bind="form.AuthorName" disabled="@busy" />
+    </div>
+    <button type="submit" class="btn btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(form.Text))">
+        @(busy ? "Submitting..." : "Submit")
+    </button>
+</EditForm>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger mt-3" role="alert">@error</div>
+}
+
+<hr />
+
+@if (items is null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (items.Count == 0)
+{
+    <p><em>No suggestions yet. Be the first.</em></p>
+}
+else
+{
+    <ul class="list-group">
+        @foreach (var item in items)
+        {
+            <li class="list-group-item">
+                <div>@item.Text</div>
+                <small class="text-muted">
+                    @(item.AuthorName ?? "anonymous") · @item.SubmittedAtUtc.ToLocalTime().ToString("g")
+                </small>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private sealed class Form
+    {
+        public string Text { get; set; } = "";
+        public string? AuthorName { get; set; }
+    }
+
+    private readonly Form form = new();
+    private IReadOnlyList<Suggestion>? items;
+    private bool busy;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAsync();
+    }
+
+    private async Task SubmitAsync()
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            await Api.SubmitAsync(new SubmitSuggestionRequest(form.Text, form.AuthorName));
+            form.Text = "";
+            form.AuthorName = null;
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        try
+        {
+            items = await Api.ListAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            items = [];
+        }
+    }
+}
