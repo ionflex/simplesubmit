@@ -15,5 +15,6 @@ builder.Services.AddScoped
     }
 );
 builder.Services.AddScoped<SuggestionsApi>();
+builder.Services.AddScoped<AdminApi>();
 
 await builder.Build().RunAsync();

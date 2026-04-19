@@ -7,6 +7,9 @@ param namePrefix string
 @description('Storage account name (3-24 lowercase alphanumeric, no separators).')
 param storageName string
 
+@description('GitHub numeric user id that is allowed to moderate submissions.')
+param adminGitHubUserId string
+
 resource log 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: '${namePrefix}-log'
   location: location
@@ -43,6 +46,8 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
+var storageConnection = 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+
 resource swa 'Microsoft.Web/staticSites@2023-12-01' = {
   name: '${namePrefix}-stapp'
   location: location
@@ -58,6 +63,8 @@ resource swaAppSettings 'Microsoft.Web/staticSites/config@2023-12-01' = {
   name: 'appsettings'
   properties: {
     APPLICATIONINSIGHTS_CONNECTION_STRING: appi.properties.ConnectionString
+    ADMIN_GITHUB_USER_ID: adminGitHubUserId
+    SUGGESTIONS_STORAGE: storageConnection
   }
 }
 

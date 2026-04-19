@@ -1,9 +1,40 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/api/*", "/css/*", "/js/*", "/_framework/*", "/*.{png,ico,jpg,svg,webmanifest}"]
+    "exclude": ["/api/*", "/css/*", "/js/*", "/_framework/*", "/.auth/*", "/*.{png,ico,jpg,svg,webmanifest}"]
   },
   "mimeTypes": {
     ".wasm": "application/wasm"
+  },
+  "routes": [
+    {
+      "route": "/admin",
+      "rewrite": "/index.html",
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/api/suggestions/pending",
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/api/suggestions/*/approve",
+      "methods": ["POST"],
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/api/suggestions/*/reject",
+      "methods": ["POST"],
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/api/admin/*",
+      "allowedRoles": ["authenticated"]
+    }
+  ],
+  "responseOverrides": {
+    "401": {
+      "redirect": "/.auth/login/github",
+      "statusCode": 302
+    }
   }
 }

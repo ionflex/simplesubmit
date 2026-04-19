@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using SimpleSubmit.Api.Identity;
@@ -63,7 +62,7 @@ public sealed class SuggestionsFunctions
     )
     {
         _ = await identity.GetOrCreateAsync(req.HttpContext);
-        var items = await store.ListAsync(ct);
+        var items = await store.ListByStatusAsync(SuggestionStatus.Approved, ct);
         return Results.Ok(items);
     }
 }

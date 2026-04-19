@@ -1,0 +1,172 @@
+@page "/admin"
+@inject AdminApi Api
+
+<PageTitle>SimpleSubmit · Admin</PageTitle>
+
+<h1>Moderation</h1>
+
+@switch (state)
+{
+    case State.Loading:
+        <p><em>Loading...</em></p>
+        break;
+
+    case State.Unauthorized:
+        <div class="alert alert-warning">
+            You need to sign in.
+            <a class="btn btn-primary btn-sm ms-2" href="/.auth/login/github">Sign in with GitHub</a>
+        </div>
+        break;
+
+    case State.Forbidden:
+        <div class="alert alert-danger">
+            Signed in, but not the admin for this site.
+            <a class="btn btn-outline-secondary btn-sm ms-2" href="/.auth/logout">Sign out</a>
+        </div>
+        break;
+
+    case State.Ready:
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span>@pending.Count pending</span>
+            <a class="btn btn-outline-secondary btn-sm" href="/.auth/logout">Sign out</a>
+        </div>
+
+        @if (pending.Count == 0)
+        {
+            <p><em>Nothing to moderate.</em></p>
+        }
+        else
+        {
+            <ul class="list-group mb-4">
+                @foreach (var item in pending)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div class="me-3">
+                            <div>@item.Text</div>
+                            <small class="text-muted">
+                                @(item.AuthorName ?? "anonymous") · @item.SubmittedAtUtc.ToLocalTime().ToString("g")
+                            </small>
+                        </div>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button class="btn btn-success" disabled="@busy" @onclick="() => ApproveAsync(item.Id)">Approve</button>
+                            <button class="btn btn-danger" disabled="@busy" @onclick="() => RejectAsync(item.Id)">Reject</button>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+
+        <h2>Purge rejected</h2>
+        <p class="text-muted small">Deletes rejected suggestions older than the given number of days.</p>
+        <div class="input-group mb-2" style="max-width: 320px;">
+            <span class="input-group-text">Older than</span>
+            <input type="number" class="form-control" min="0" @bind="purgeDays" disabled="@busy" />
+            <span class="input-group-text">days</span>
+        </div>
+        <button class="btn btn-outline-danger" disabled="@busy" @onclick="PurgeAsync">Purge rejected</button>
+
+        @if (lastPurgeCount is not null)
+        {
+            <div class="alert alert-info mt-3">Purged @lastPurgeCount rejected suggestion(s).</div>
+        }
+        break;
+}
+
+@if (error is not null)
+{
+    <div class="alert alert-danger mt-3">@error</div>
+}
+
+@code {
+    private enum State { Loading, Unauthorized, Forbidden, Ready }
+
+    private State state = State.Loading;
+    private IReadOnlyList<Suggestion> pending = [];
+    private bool busy;
+    private int purgeDays = 30;
+    private int? lastPurgeCount;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        error = null;
+        state = State.Loading;
+        try
+        {
+            var (outcome, items) = await Api.ListPendingAsync();
+            state = outcome switch
+            {
+                AdminApi.Outcome.Unauthorized => State.Unauthorized,
+                AdminApi.Outcome.Forbidden => State.Forbidden,
+                _ => State.Ready,
+            };
+            pending = items;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            state = State.Ready;
+            pending = [];
+        }
+    }
+
+    private async Task ApproveAsync(Guid id)
+    {
+        busy = true;
+        try
+        {
+            await Api.ApproveAsync(id);
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task RejectAsync(Guid id)
+    {
+        busy = true;
+        try
+        {
+            await Api.RejectAsync(id);
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task PurgeAsync()
+    {
+        busy = true;
+        lastPurgeCount = null;
+        error = null;
+        try
+        {
+            lastPurgeCount = await Api.PurgeRejectedAsync(purgeDays);
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}
