@@ -11,10 +11,9 @@
 #   3. Adds federated credentials for pushes to main and for pull requests.
 #   4. Prints the three GitHub repo secrets you need to configure.
 
-param
-(
-    [Parameter(Mandatory)] [string] $GitHubOwner,   # e.g. "yngve-github-username" or "your-org"
-    [Parameter(Mandatory)] [string] $GitHubRepo,    # e.g. "simplesubmit"
+param(
+    [Parameter(Mandatory)] [string] $GitHubOwner,
+    [Parameter(Mandatory)] [string] $GitHubRepo,
     [string] $AppName = 'simsub-github-oidc'
 )
 
@@ -26,10 +25,9 @@ $tenantId       = az account show --query tenantId -o tsv
 Write-Host "Subscription : $subscriptionId"
 Write-Host "Tenant       : $tenantId"
 
-# 1. Create the AAD app (idempotent-ish: reuse if it already exists)
+# 1. Create the AAD app (reuse if it already exists)
 $appId = az ad app list --display-name $AppName --query "[0].appId" -o tsv
-if (-not $appId)
-{
+if (-not $appId) {
     $appId = az ad app create --display-name $AppName --query appId -o tsv
     az ad sp create --id $appId | Out-Null
 }
@@ -44,14 +42,15 @@ az role assignment create `
     --only-show-errors 2>$null | Out-Null
 
 # 3. Federated credentials: one for pushes to main, one for pull_requests
-$subjects = @
-(
+$subjects = @(
     @{ Name = 'github-main'; Subject = "repo:${GitHubOwner}/${GitHubRepo}:ref:refs/heads/main" },
     @{ Name = 'github-pr';   Subject = "repo:${GitHubOwner}/${GitHubRepo}:pull_request" }
 )
 
-foreach ($s in $subjects)
-{
+foreach ($s in $subjects) {
+    $existing = az ad app federated-credential list --id $appId --query "[?name=='$($s.Name)'] | [0].name" -o tsv
+    if ($existing) { continue }
+
     $body = @{
         name      = $s.Name
         issuer    = 'https://token.actions.githubusercontent.com'
@@ -61,14 +60,7 @@ foreach ($s in $subjects)
 
     $tempFile = New-TemporaryFile
     Set-Content -Path $tempFile -Value $body -Encoding utf8
-
-    # Skip if already present
-    $existing = az ad app federated-credential list --id $appId --query "[?name=='$($s.Name)'] | [0].name" -o tsv
-    if (-not $existing)
-    {
-        az ad app federated-credential create --id $appId --parameters "@$tempFile" | Out-Null
-    }
-
+    az ad app federated-credential create --id $appId --parameters "@$tempFile" | Out-Null
     Remove-Item $tempFile
 }
 
