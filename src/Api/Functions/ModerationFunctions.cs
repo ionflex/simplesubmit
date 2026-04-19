@@ -16,10 +16,10 @@ public sealed class ModerationFunctions
 {
     private const int DefaultPurgeAgeDays = 30;
 
-    [Function("AdminWhoAmI")]
-    public IResult WhoAmI
+    [Function("DiagWhoAmI")]
+    public IResult DiagWhoAmI
     (
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "admin/whoami")] HttpRequest req
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "_diag/whoami")] HttpRequest req
     )
     {
         var isAdmin = admin.IsAdmin(req.HttpContext);
@@ -32,6 +32,26 @@ public sealed class ModerationFunctions
             HasPrincipalHeader = !string.IsNullOrEmpty(principalHeader),
             AdminUserIdConfigured = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ADMIN_GITHUB_USER_ID")),
         });
+    }
+
+    [Function("DiagPendingCount")]
+    public async Task<IResult> DiagPendingCount
+    (
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "_diag/pending-count")] HttpRequest req,
+        CancellationToken ct
+    )
+    {
+        var items = await store.ListByStatusAsync(SuggestionStatus.Pending, ct);
+        return Results.Ok(new { count = items.Count });
+    }
+
+    [Function("DiagPurgeAccess")]
+    public IResult DiagPurgeAccess
+    (
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "_diag/purge-access")] HttpRequest req
+    )
+    {
+        return Results.Ok(new { reachable = true });
     }
 
     [Function("ListPending")]
