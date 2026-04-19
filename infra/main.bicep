@@ -3,19 +3,22 @@ targetScope = 'subscription'
 @description('Azure region for all resources. West Europe by default.')
 param location string = 'westeurope'
 
-@description('Short org/owner prefix used in all resource names.')
-param orgPrefix string = 'iptyphet'
+@description('System name — overall product/owner prefix (docs/azure-naming.md).')
+param system string = 'iptyphet'
 
-@description('Workload / app name used in all resource names.')
-param workload string = 'simsub'
-
-@description('Environment abbreviation (p = prod).')
+@description('Environment abbreviation: d=dev, t=test, s=staging, p=prod.')
 param env string = 'p'
 
-var suffix = '${orgPrefix}-${workload}-${env}-we'
+@description('Two-letter region abbreviation (we, ne, cc, ce).')
+param regionAbbr string = 'we'
+
+@description('Component name within the system. Short, lowercase, no separators.')
+param component string = 'simsub'
+
+var namePrefix = '${system}-${env}-${regionAbbr}-${component}'
 
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
-  name: 'rg-${suffix}'
+  name: '${namePrefix}-rg'
   location: location
 }
 
@@ -24,10 +27,8 @@ module resources 'resources.bicep' = {
   name: 'resources'
   params: {
     location: location
-    suffix: suffix
-    orgPrefix: orgPrefix
-    workload: workload
-    env: env
+    namePrefix: namePrefix
+    storageName: toLower('${system}${env}${regionAbbr}${component}st')
   }
 }
 

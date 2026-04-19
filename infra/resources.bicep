@@ -1,22 +1,14 @@
 @description('Region for all resources.')
 param location string
 
-@description('Shared suffix used in all resource names (orgPrefix-workload-env-region).')
-param suffix string
+@description('Resource name prefix: system-env-region-component (no resource-type suffix).')
+param namePrefix string
 
-@description('Short org/owner prefix (used for the run-together storage name).')
-param orgPrefix string
-
-@description('Workload name (used for the run-together storage name).')
-param workload string
-
-@description('Environment abbreviation (used for the run-together storage name).')
-param env string
-
-var storageName = toLower('st${orgPrefix}${workload}${env}we')
+@description('Storage account name (3-24 lowercase alphanumeric, no separators).')
+param storageName string
 
 resource log 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
-  name: 'log-${suffix}'
+  name: '${namePrefix}-log'
   location: location
   properties: {
     sku: {
@@ -27,7 +19,7 @@ resource log 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
 }
 
 resource appi 'Microsoft.Insights/components@2020-02-02' = {
-  name: 'appi-${suffix}'
+  name: '${namePrefix}-appi'
   location: location
   kind: 'web'
   properties: {
@@ -52,7 +44,7 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
 }
 
 resource swa 'Microsoft.Web/staticSites@2023-12-01' = {
-  name: 'stapp-${suffix}'
+  name: '${namePrefix}-stapp'
   location: location
   sku: {
     name: 'Free'

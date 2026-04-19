@@ -15,8 +15,8 @@ concurrency:
 
 env:
   AZURE_LOCATION: westeurope
-  RESOURCE_GROUP: rg-iptyphet-simsub-p-we
-  STATIC_WEB_APP: stapp-iptyphet-simsub-p-we
+  RESOURCE_GROUP: iptyphet-p-we-simsub-rg
+  STATIC_WEB_APP: iptyphet-p-we-simsub-stapp
 
 jobs:
   infra:
