@@ -5,10 +5,18 @@ namespace SimpleSubmit.Client.Services;
 
 public sealed class SuggestionsApi(HttpClient http)
 {
+    private sealed record PendingCountResponse(int Count);
+
     public async Task<IReadOnlyList<SuggestionListItem>> ListAsync(CancellationToken ct = default)
     {
         var items = await http.GetFromJsonAsync<SuggestionListItem[]>("api/suggestions", ct);
         return items ?? [];
+    }
+
+    public async Task<int> GetPendingCountAsync(CancellationToken ct = default)
+    {
+        var response = await http.GetFromJsonAsync<PendingCountResponse>("api/suggestions/pending-count", ct);
+        return response?.Count ?? 0;
     }
 
     public async Task<SubmitSuggestionResponse> SubmitAsync(SubmitSuggestionRequest request, CancellationToken ct = default)

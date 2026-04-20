@@ -85,6 +85,17 @@ public sealed class SuggestionsFunctions
         return Results.Ok(items);
     }
 
+    [Function("PendingCount")]
+    public async Task<IResult> PendingCountAsync
+    (
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "suggestions/pending-count")] HttpRequest req,
+        CancellationToken ct
+    )
+    {
+        var pending = await store.ListByStatusAsync(SuggestionStatus.Pending, ct);
+        return Results.Ok(new { count = pending.Count });
+    }
+
     [Function("Vote")]
     public async Task<IResult> VoteAsync
     (
