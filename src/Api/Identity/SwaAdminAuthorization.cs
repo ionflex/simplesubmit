@@ -4,45 +4,73 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using SimpleSubmit.Api.Storage;
 
 namespace SimpleSubmit.Api.Identity;
 
-public sealed class SwaAdminAuthorization(IConfiguration config, ILogger<SwaAdminAuthorization> logger) : IAdminAuthorization
+public sealed class SwaAdminAuthorization
+(
+    IConfiguration config,
+    IAdminRegistry registry,
+    ILogger<SwaAdminAuthorization> logger
+) : IAdminAuthorization
 {
     private const string PrincipalHeader = "x-ms-client-principal";
-    private readonly string? _adminUserId = config["ADMIN_PRINCIPAL_ID"];
+    private readonly string? _bootstrapPrincipalId = config["ADMIN_PRINCIPAL_ID"];
 
-    public bool IsAdmin(HttpContext ctx)
+    public string? BootstrapPrincipalId => _bootstrapPrincipalId;
+
+    public async ValueTask<bool> IsAdminAsync(HttpContext ctx, CancellationToken ct = default)
     {
-        if (string.IsNullOrEmpty(_adminUserId))
+        var principal = GetPrincipal(ctx);
+        if (principal is null)
         {
-            // Local dev / misconfigured prod: allow, but log loudly so it's obvious.
-            logger.LogWarning("ADMIN_PRINCIPAL_ID is not configured; admin routes are open.");
+            if (string.IsNullOrEmpty(_bootstrapPrincipalId))
+            {
+                logger.LogWarning("ADMIN_PRINCIPAL_ID is not configured; admin routes are open.");
+                return true;
+            }
+            return false;
+        }
+
+        if (string.Equals(principal.UserId, _bootstrapPrincipalId, StringComparison.Ordinal))
+        {
             return true;
         }
 
+        return await registry.IsActiveAsync(principal.UserId, ct);
+    }
+
+    public ClientPrincipal? GetPrincipal(HttpContext ctx)
+    {
         if (!ctx.Request.Headers.TryGetValue(PrincipalHeader, out var headerValues))
         {
-            return false;
+            return null;
         }
 
         var encoded = headerValues.ToString();
         if (string.IsNullOrEmpty(encoded))
         {
-            return false;
+            return null;
         }
 
         try
         {
             var json = Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
-            var principal = JsonSerializer.Deserialize<ClientPrincipal>(json, JsonOpts);
-            return principal?.IdentityProvider == "github"
-                && string.Equals(principal.UserId, _adminUserId, StringComparison.Ordinal);
+            return JsonSerializer.Deserialize<WireClientPrincipal>(json, JsonOpts) is { UserId: not null } wire
+                ? new ClientPrincipal
+                (
+                    IdentityProvider: wire.IdentityProvider ?? "",
+                    UserId: wire.UserId,
+                    UserDetails: wire.UserDetails ?? "",
+                    UserRoles: wire.UserRoles ?? []
+                )
+                : null;
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to decode {Header}.", PrincipalHeader);
-            return false;
+            return null;
         }
     }
 
@@ -51,7 +79,7 @@ public sealed class SwaAdminAuthorization(IConfiguration config, ILogger<SwaAdmi
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
-    private sealed record ClientPrincipal
+    private sealed record WireClientPrincipal
     (
         [property: JsonPropertyName("identityProvider")] string? IdentityProvider,
         [property: JsonPropertyName("userId")] string? UserId,

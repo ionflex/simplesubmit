@@ -3,7 +3,7 @@
 
 <PageTitle>SimpleSubmit · Admin</PageTitle>
 
-<h1>Moderation</h1>
+<h1>Admin</h1>
 
 @switch (state)
 {
@@ -11,26 +11,39 @@
         <p><em>Loading...</em></p>
         break;
 
-    case State.Unauthorized:
+    case State.NotSignedIn:
         <div class="alert alert-warning">
             You need to sign in.
             <a class="btn btn-primary btn-sm ms-2" href="/.auth/login/github">Sign in with GitHub</a>
         </div>
         break;
 
-    case State.Forbidden:
-        <div class="alert alert-danger">
-            Signed in, but not the admin for this site.
+    case State.NoRequest:
+        <div class="alert alert-info">
+            Signed in as <strong>@(self?.DisplayName ?? "unknown")</strong> (@self?.IdentityProvider).
+            You are not an admin.
+            <div class="mt-2">
+                <button class="btn btn-primary btn-sm" disabled="@busy" @onclick="RequestAccessAsync">Request admin access</button>
+                <a class="btn btn-outline-secondary btn-sm ms-2" href="/.auth/logout">Sign out</a>
+            </div>
+        </div>
+        break;
+
+    case State.Pending:
+        <div class="alert alert-info">
+            Your admin-access request is pending approval.
             <a class="btn btn-outline-secondary btn-sm ms-2" href="/.auth/logout">Sign out</a>
         </div>
         break;
 
-    case State.Ready:
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <span>@pending.Count pending</span>
+    case State.Admin:
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span>Signed in as <strong>@(self?.DisplayName ?? "unknown")</strong> (@self?.IdentityProvider)</span>
             <a class="btn btn-outline-secondary btn-sm" href="/.auth/logout">Sign out</a>
         </div>
 
+        <h2>Moderation</h2>
+        <p class="text-muted">@pending.Count pending</p>
         @if (pending.Count == 0)
         {
             <p><em>Nothing to moderate.</em></p>
@@ -48,8 +61,52 @@
                             </small>
                         </div>
                         <div class="btn-group btn-group-sm" role="group">
-                            <button class="btn btn-success" disabled="@busy" @onclick="() => ApproveAsync(item.Id)">Approve</button>
-                            <button class="btn btn-danger" disabled="@busy" @onclick="() => RejectAsync(item.Id)">Reject</button>
+                            <button class="btn btn-success" disabled="@busy" @onclick="() => ApproveSuggestionAsync(item.Id)">Approve</button>
+                            <button class="btn btn-danger" disabled="@busy" @onclick="() => RejectSuggestionAsync(item.Id)">Reject</button>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+
+        <h2>Admins</h2>
+        @if (admins.Count == 0)
+        {
+            <p><em>No admins yet.</em></p>
+        }
+        else
+        {
+            <ul class="list-group mb-4">
+                @foreach (var a in admins)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div class="me-3">
+                            <div>
+                                <strong>@a.DisplayName</strong>
+                                @if (a.IsBootstrap)
+                                {
+                                    <span class="badge bg-secondary ms-1">bootstrap</span>
+                                }
+                                else if (a.Status == AdminStatus.Pending)
+                                {
+                                    <span class="badge bg-warning text-dark ms-1">pending</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success ms-1">active</span>
+                                }
+                            </div>
+                            <small class="text-muted font-monospace">@a.IdentityProvider · @a.PrincipalId</small>
+                        </div>
+                        <div class="btn-group btn-group-sm" role="group">
+                            @if (!a.IsBootstrap && a.Status == AdminStatus.Pending)
+                            {
+                                <button class="btn btn-success" disabled="@busy" @onclick="() => ApproveAdminAsync(a.PrincipalId)">Approve</button>
+                            }
+                            @if (!a.IsBootstrap)
+                            {
+                                <button class="btn btn-outline-danger" disabled="@busy" @onclick="() => RemoveAdminAsync(a.PrincipalId)">Remove</button>
+                            }
                         </div>
                     </li>
                 }
@@ -78,10 +135,12 @@
 }
 
 @code {
-    private enum State { Loading, Unauthorized, Forbidden, Ready }
+    private enum State { Loading, NotSignedIn, NoRequest, Pending, Admin }
 
     private State state = State.Loading;
+    private AdminSelfStatus? self;
     private IReadOnlyList<Suggestion> pending = [];
+    private IReadOnlyList<AdminEntry> admins = [];
     private bool busy;
     private int purgeDays = 30;
     private int? lastPurgeCount;
@@ -98,29 +157,39 @@
         state = State.Loading;
         try
         {
-            var (outcome, items) = await Api.ListPendingAsync();
-            state = outcome switch
+            self = await Api.GetSelfAsync();
+            state = ResolveState(self);
+            if (state == State.Admin)
             {
-                AdminApi.Outcome.Unauthorized => State.Unauthorized,
-                AdminApi.Outcome.Forbidden => State.Forbidden,
-                _ => State.Ready,
-            };
-            pending = items;
+                await LoadAdminDataAsync();
+            }
         }
         catch (Exception ex)
         {
             error = ex.Message;
-            state = State.Ready;
-            pending = [];
         }
     }
 
-    private async Task ApproveAsync(Guid id)
+    private static State ResolveState(AdminSelfStatus status)
+    {
+        if (!status.IsSignedIn) return State.NotSignedIn;
+        if (status.IsAdmin) return State.Admin;
+        return status.RequestStatus == AdminStatus.Pending ? State.Pending : State.NoRequest;
+    }
+
+    private async Task LoadAdminDataAsync()
+    {
+        var (_, items) = await Api.ListPendingAsync();
+        pending = items;
+        admins = await Api.ListAdminsAsync();
+    }
+
+    private async Task RequestAccessAsync()
     {
         busy = true;
         try
         {
-            await Api.ApproveAsync(id);
+            await Api.RequestAccessAsync();
             await RefreshAsync();
         }
         catch (Exception ex)
@@ -133,22 +202,40 @@
         }
     }
 
-    private async Task RejectAsync(Guid id)
+    private async Task ApproveSuggestionAsync(Guid id)
     {
-        busy = true;
-        try
+        await RunAsync(async () =>
         {
-            await Api.RejectAsync(id);
-            await RefreshAsync();
-        }
-        catch (Exception ex)
+            await Api.ApproveSuggestionAsync(id);
+            await LoadAdminDataAsync();
+        });
+    }
+
+    private async Task RejectSuggestionAsync(Guid id)
+    {
+        await RunAsync(async () =>
         {
-            error = ex.Message;
-        }
-        finally
+            await Api.RejectSuggestionAsync(id);
+            await LoadAdminDataAsync();
+        });
+    }
+
+    private async Task ApproveAdminAsync(string principalId)
+    {
+        await RunAsync(async () =>
         {
-            busy = false;
-        }
+            await Api.ApproveAdminAsync(principalId);
+            admins = await Api.ListAdminsAsync();
+        });
+    }
+
+    private async Task RemoveAdminAsync(string principalId)
+    {
+        await RunAsync(async () =>
+        {
+            await Api.RemoveAdminAsync(principalId);
+            admins = await Api.ListAdminsAsync();
+        });
     }
 
     private async Task PurgeAsync()
@@ -159,6 +246,24 @@
         try
         {
             lastPurgeCount = await Api.PurgeRejectedAsync(purgeDays);
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task RunAsync(Func<Task> action)
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            await action();
         }
         catch (Exception ex)
         {

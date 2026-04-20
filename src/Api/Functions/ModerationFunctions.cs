@@ -11,6 +11,7 @@ public sealed class ModerationFunctions
 (
     ISuggestionStore store,
     IAdminAuthorization admin,
+    IAdminRegistry admins,
     ILogger<ModerationFunctions> logger
 )
 {
@@ -23,7 +24,7 @@ public sealed class ModerationFunctions
         CancellationToken ct
     )
     {
-        if (!admin.IsAdmin(req.HttpContext))
+        if (!await admin.IsAdminAsync(req.HttpContext, ct))
         {
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
@@ -40,7 +41,7 @@ public sealed class ModerationFunctions
         CancellationToken ct
     )
     {
-        if (!admin.IsAdmin(req.HttpContext))
+        if (!await admin.IsAdminAsync(req.HttpContext, ct))
         {
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
@@ -63,7 +64,7 @@ public sealed class ModerationFunctions
         CancellationToken ct
     )
     {
-        if (!admin.IsAdmin(req.HttpContext))
+        if (!await admin.IsAdminAsync(req.HttpContext, ct))
         {
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
@@ -85,7 +86,7 @@ public sealed class ModerationFunctions
         CancellationToken ct
     )
     {
-        if (!admin.IsAdmin(req.HttpContext))
+        if (!await admin.IsAdminAsync(req.HttpContext, ct))
         {
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
@@ -101,5 +102,117 @@ public sealed class ModerationFunctions
         var count = await store.PurgeRejectedOlderThanAsync(TimeSpan.FromDays(days), ct);
         logger.LogInformation("Purged {Count} rejected suggestions older than {Days} days.", count, days);
         return Results.Ok(new PurgeRejectedResponse(count));
+    }
+
+    [Function("AdminSelf")]
+    public async Task<IResult> AdminSelfAsync
+    (
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "mod/self")] HttpRequest req,
+        CancellationToken ct
+    )
+    {
+        var principal = admin.GetPrincipal(req.HttpContext);
+        if (principal is null)
+        {
+            return Results.Ok(new AdminSelfStatus(false, false, null, null, null, null));
+        }
+
+        var isAdmin = await admin.IsAdminAsync(req.HttpContext, ct);
+        var entry = await admins.GetAsync(principal.UserId, ct);
+        return Results.Ok(new AdminSelfStatus
+        (
+            IsSignedIn: true,
+            IsAdmin: isAdmin,
+            PrincipalId: principal.UserId,
+            DisplayName: principal.UserDetails,
+            IdentityProvider: principal.IdentityProvider,
+            RequestStatus: entry?.Status
+        ));
+    }
+
+    [Function("RequestAdminAccess")]
+    public async Task<IResult> RequestAdminAccessAsync
+    (
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "mod/admin-requests")] HttpRequest req,
+        CancellationToken ct
+    )
+    {
+        var principal = admin.GetPrincipal(req.HttpContext);
+        if (principal is null)
+        {
+            return Results.StatusCode(StatusCodes.Status401Unauthorized);
+        }
+
+        var entry = await admins.UpsertPendingAsync(principal.UserId, principal.UserDetails, principal.IdentityProvider, ct);
+        logger.LogInformation("Admin access requested by {User} ({Principal}), status={Status}", principal.UserDetails, principal.UserId, entry.Status);
+        return Results.Ok(entry);
+    }
+
+    [Function("ListAdmins")]
+    public async Task<IResult> ListAdminsAsync
+    (
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "mod/admins")] HttpRequest req,
+        CancellationToken ct
+    )
+    {
+        if (!await admin.IsAdminAsync(req.HttpContext, ct))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        var list = await admins.ListAsync(ct);
+        return Results.Ok(list);
+    }
+
+    [Function("ApproveAdmin")]
+    public async Task<IResult> ApproveAdminAsync
+    (
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "mod/admins/{principalId}/approve")] HttpRequest req,
+        string principalId,
+        CancellationToken ct
+    )
+    {
+        if (!await admin.IsAdminAsync(req.HttpContext, ct))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        var approver = admin.GetPrincipal(req.HttpContext);
+        var updated = await admins.ApproveAsync(principalId, approver?.UserId ?? "", ct);
+        if (updated is null)
+        {
+            return Results.NotFound();
+        }
+
+        logger.LogInformation("Admin {Principal} approved by {Approver}", principalId, approver?.UserDetails ?? "unknown");
+        return Results.Ok(updated);
+    }
+
+    [Function("RemoveAdmin")]
+    public async Task<IResult> RemoveAdminAsync
+    (
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "mod/admins/{principalId}")] HttpRequest req,
+        string principalId,
+        CancellationToken ct
+    )
+    {
+        if (!await admin.IsAdminAsync(req.HttpContext, ct))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        if (string.Equals(principalId, admin.BootstrapPrincipalId, StringComparison.Ordinal))
+        {
+            return Results.BadRequest(new { error = "cannot remove the bootstrap admin" });
+        }
+
+        var removed = await admins.RemoveAsync(principalId, ct);
+        if (!removed)
+        {
+            return Results.NotFound();
+        }
+
+        logger.LogInformation("Admin/request {Principal} removed.", principalId);
+        return Results.NoContent();
     }
 }

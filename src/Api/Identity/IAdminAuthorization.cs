@@ -4,5 +4,7 @@ namespace SimpleSubmit.Api.Identity;
 
 public interface IAdminAuthorization
 {
-    bool IsAdmin(HttpContext ctx);
+    ValueTask<bool> IsAdminAsync(HttpContext ctx, CancellationToken ct = default);
+    ClientPrincipal? GetPrincipal(HttpContext ctx);
+    string? BootstrapPrincipalId { get; }
 }
