@@ -14,7 +14,10 @@
     case State.NotSignedIn:
         <div class="alert alert-warning">
             You need to sign in.
-            <a class="btn btn-primary btn-sm ms-2" href="/.auth/login/github">Sign in with GitHub</a>
+            <div class="mt-2">
+                <a class="btn btn-primary btn-sm me-2" href="/.auth/login/github">Sign in with GitHub</a>
+                <a class="btn btn-primary btn-sm" href="/.auth/login/aad">Sign in with Microsoft</a>
+            </div>
         </div>
         break;
 
