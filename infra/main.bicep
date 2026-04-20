@@ -15,8 +15,8 @@ param regionAbbr string = 'we'
 @description('Component name within the system. Short, lowercase, no separators.')
 param component string = 'simsub'
 
-@description('GitHub numeric user id that is allowed to moderate submissions.')
-param adminGitHubUserId string = '48017567'
+@description('SWA-assigned principal userId (from /.auth/me) that is allowed to moderate submissions.')
+param adminPrincipalId string = '88e28869238145c89851adf36ed40361'
 
 var namePrefix = '${system}-${env}-${regionAbbr}-${component}'
 
@@ -32,7 +32,7 @@ module resources 'resources.bicep' = {
     location: location
     namePrefix: namePrefix
     storageName: toLower('${system}${env}${regionAbbr}${component}st')
-    adminGitHubUserId: adminGitHubUserId
+    adminPrincipalId: adminPrincipalId
   }
 }
 

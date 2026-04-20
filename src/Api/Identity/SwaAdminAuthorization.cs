@@ -10,14 +10,14 @@ namespace SimpleSubmit.Api.Identity;
 public sealed class SwaAdminAuthorization(IConfiguration config, ILogger<SwaAdminAuthorization> logger) : IAdminAuthorization
 {
     private const string PrincipalHeader = "x-ms-client-principal";
-    private readonly string? _adminUserId = config["ADMIN_GITHUB_USER_ID"];
+    private readonly string? _adminUserId = config["ADMIN_PRINCIPAL_ID"];
 
     public bool IsAdmin(HttpContext ctx)
     {
         if (string.IsNullOrEmpty(_adminUserId))
         {
             // Local dev / misconfigured prod: allow, but log loudly so it's obvious.
-            logger.LogWarning("ADMIN_GITHUB_USER_ID is not configured; admin routes are open.");
+            logger.LogWarning("ADMIN_PRINCIPAL_ID is not configured; admin routes are open.");
             return true;
         }
 

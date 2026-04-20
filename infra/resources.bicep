@@ -7,8 +7,8 @@ param namePrefix string
 @description('Storage account name (3-24 lowercase alphanumeric, no separators).')
 param storageName string
 
-@description('GitHub numeric user id that is allowed to moderate submissions.')
-param adminGitHubUserId string
+@description('SWA-assigned principal userId from /.auth/me that is allowed to moderate submissions.')
+param adminPrincipalId string
 
 resource log 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: '${namePrefix}-log'
@@ -63,7 +63,7 @@ resource swaAppSettings 'Microsoft.Web/staticSites/config@2023-12-01' = {
   name: 'appsettings'
   properties: {
     APPLICATIONINSIGHTS_CONNECTION_STRING: appi.properties.ConnectionString
-    ADMIN_GITHUB_USER_ID: adminGitHubUserId
+    ADMIN_PRINCIPAL_ID: adminPrincipalId
     SUGGESTIONS_STORAGE: storageConnection
   }
 }

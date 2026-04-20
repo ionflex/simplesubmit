@@ -30,7 +30,7 @@ public sealed class ModerationFunctions
         {
             IsAdmin = isAdmin,
             HasPrincipalHeader = !string.IsNullOrEmpty(principalHeader),
-            AdminUserIdConfigured = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ADMIN_GITHUB_USER_ID")),
+            AdminPrincipalIdConfigured = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ADMIN_PRINCIPAL_ID")),
         });
     }
 
