@@ -13,7 +13,7 @@
         <div class="form-text">@(form.Text?.Length ?? 0) / 500</div>
     </div>
     <div class="mb-2">
-        <label for="author" class="form-label">Name (optional)</label>
+        <label for="author" class="form-label">Your name (optional)</label>
         <input id="author" class="form-control" maxlength="60"
                @bind="form.AuthorName" disabled="@busy" />
     </div>
