@@ -14,4 +14,10 @@ public interface ISuggestionStore
     Task<Suggestion?> SetStatusAsync(Guid id, SuggestionStatus newStatus, CancellationToken ct);
 
     Task<int> PurgeRejectedOlderThanAsync(TimeSpan age, CancellationToken ct);
+
+    Task<IReadOnlyList<Suggestion>> ListAllAsync(CancellationToken ct);
+
+    Task<bool> DeleteAsync(Guid id, CancellationToken ct);
+
+    Task<int> DeleteAllAsync(CancellationToken ct);
 }

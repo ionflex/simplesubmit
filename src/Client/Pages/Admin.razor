@@ -42,7 +42,10 @@
     case State.Admin:
         <div class="d-flex justify-content-between align-items-center mb-3">
             <span>Signed in as <strong>@(self?.DisplayName ?? "unknown")</strong> (@self?.IdentityProvider)</span>
-            <a class="btn btn-outline-secondary btn-sm" href="/.auth/logout">Sign out</a>
+            <div>
+                <a class="btn btn-outline-primary btn-sm me-2" href="/admin/submissions">Manage submissions</a>
+                <a class="btn btn-outline-secondary btn-sm" href="/.auth/logout">Sign out</a>
+            </div>
         </div>
 
         <h2>Moderation</h2>

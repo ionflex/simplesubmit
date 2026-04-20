@@ -18,4 +18,10 @@ public interface IVoteStore
 
     /// <summary>Returns the subset of suggestion ids that the given voter has voted on.</summary>
     Task<IReadOnlySet<Guid>> GetVotedAsync(SubmitterId voter, IReadOnlyCollection<Guid> suggestionIds, CancellationToken ct);
+
+    /// <summary>Removes every vote for the given suggestion. Returns the number deleted.</summary>
+    Task<int> DeleteAllForSuggestionAsync(Guid suggestionId, CancellationToken ct);
+
+    /// <summary>Removes every vote in the store. Returns the number deleted.</summary>
+    Task<int> DeleteAllAsync(CancellationToken ct);
 }

@@ -49,3 +49,9 @@ public sealed record PurgeRejectedResponse
 (
     int PurgedCount
 );
+
+public sealed record PurgeAllResponse
+(
+    int DeletedSuggestions,
+    int DeletedVotes
+);

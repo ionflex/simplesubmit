@@ -51,6 +51,23 @@ public sealed class AdminApi(HttpClient http)
         return await PostNoBodyJsonAsync<Suggestion>($"api/mod/suggestions/{id}/reject", ct);
     }
 
+    public async Task<IReadOnlyList<Suggestion>> ListAllSuggestionsAsync(CancellationToken ct = default)
+    {
+        var items = await http.GetFromJsonAsync<Suggestion[]>("api/mod/all-suggestions", ct);
+        return items ?? [];
+    }
+
+    public async Task DeleteSuggestionAsync(Guid id, CancellationToken ct = default)
+    {
+        using var response = await http.DeleteAsync($"api/mod/suggestions/{id}", ct);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<PurgeAllResponse?> PurgeAllAsync(CancellationToken ct = default)
+    {
+        return await PostNoBodyJsonAsync<PurgeAllResponse>("api/mod/purge-all", ct);
+    }
+
     public async Task<int> PurgeRejectedAsync(int olderThanDays, CancellationToken ct = default)
     {
         var body = await PostNoBodyJsonAsync<PurgeRejectedResponse>($"api/mod/purge-rejected?olderThanDays={olderThanDays}", ct);

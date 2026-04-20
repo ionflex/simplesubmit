@@ -45,4 +45,25 @@ public sealed class InMemoryVoteStore : IVoteStore
             .ToHashSet();
         return Task.FromResult<IReadOnlySet<Guid>>(voted);
     }
+
+    public Task<int> DeleteAllForSuggestionAsync(Guid suggestionId, CancellationToken ct)
+    {
+        var toRemove = _votes.Keys.Where(k => k.SuggestionId == suggestionId).ToList();
+        var removed = 0;
+        foreach (var key in toRemove)
+        {
+            if (_votes.TryRemove(key, out _))
+            {
+                removed++;
+            }
+        }
+        return Task.FromResult(removed);
+    }
+
+    public Task<int> DeleteAllAsync(CancellationToken ct)
+    {
+        var count = _votes.Count;
+        _votes.Clear();
+        return Task.FromResult(count);
+    }
 }

@@ -54,6 +54,26 @@ public sealed class InMemorySuggestionStore : ISuggestionStore
         return Task.FromResult<Suggestion?>(updated);
     }
 
+    public Task<IReadOnlyList<Suggestion>> ListAllAsync(CancellationToken ct)
+    {
+        IReadOnlyList<Suggestion> snapshot = _items.Values
+            .OrderByDescending(s => s.SubmittedAtUtc)
+            .ToArray();
+        return Task.FromResult(snapshot);
+    }
+
+    public Task<bool> DeleteAsync(Guid id, CancellationToken ct)
+    {
+        return Task.FromResult(_items.TryRemove(id, out _));
+    }
+
+    public Task<int> DeleteAllAsync(CancellationToken ct)
+    {
+        var count = _items.Count;
+        _items.Clear();
+        return Task.FromResult(count);
+    }
+
     public Task<int> PurgeRejectedOlderThanAsync(TimeSpan age, CancellationToken ct)
     {
         var cutoff = DateTimeOffset.UtcNow - age;

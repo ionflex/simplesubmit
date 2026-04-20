@@ -10,6 +10,7 @@ namespace SimpleSubmit.Api.Functions;
 public sealed class ModerationFunctions
 (
     ISuggestionStore store,
+    IVoteStore votes,
     IAdminAuthorization admin,
     IAdminRegistry admins,
     ILogger<ModerationFunctions> logger
@@ -77,6 +78,64 @@ public sealed class ModerationFunctions
 
         logger.LogInformation("Suggestion {Id} rejected.", id);
         return Results.Ok(updated);
+    }
+
+    [Function("ListAllSuggestions")]
+    public async Task<IResult> ListAllSuggestionsAsync
+    (
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "mod/all-suggestions")] HttpRequest req,
+        CancellationToken ct
+    )
+    {
+        if (!await admin.IsAdminAsync(req.HttpContext, ct))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        var items = await store.ListAllAsync(ct);
+        return Results.Ok(items);
+    }
+
+    [Function("DeleteSuggestion")]
+    public async Task<IResult> DeleteSuggestionAsync
+    (
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "mod/suggestions/{id:guid}")] HttpRequest req,
+        Guid id,
+        CancellationToken ct
+    )
+    {
+        if (!await admin.IsAdminAsync(req.HttpContext, ct))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        await votes.DeleteAllForSuggestionAsync(id, ct);
+        var removed = await store.DeleteAsync(id, ct);
+        if (!removed)
+        {
+            return Results.NotFound();
+        }
+
+        logger.LogInformation("Suggestion {Id} deleted.", id);
+        return Results.NoContent();
+    }
+
+    [Function("PurgeAll")]
+    public async Task<IResult> PurgeAllAsync
+    (
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "mod/purge-all")] HttpRequest req,
+        CancellationToken ct
+    )
+    {
+        if (!await admin.IsAdminAsync(req.HttpContext, ct))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        var deletedVotes = await votes.DeleteAllAsync(ct);
+        var deletedSuggestions = await store.DeleteAllAsync(ct);
+        logger.LogWarning("Purge-all: removed {Suggestions} suggestions and {Votes} votes.", deletedSuggestions, deletedVotes);
+        return Results.Ok(new PurgeAllResponse(deletedSuggestions, deletedVotes));
     }
 
     [Function("PurgeRejected")]

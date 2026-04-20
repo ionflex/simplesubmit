@@ -1,0 +1,173 @@
+@page "/admin/submissions"
+@inject AdminApi Api
+@inject NavigationManager Nav
+
+<PageTitle>SimpleSubmit · Admin · Submissions</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">All submissions</h1>
+    <a class="btn btn-outline-secondary btn-sm" href="/admin">Back to admin</a>
+</div>
+
+@if (!allowed)
+{
+    <div class="alert alert-danger">
+        You must be an admin to view this page. <a href="/admin">Go to sign in</a>.
+    </div>
+}
+else
+{
+    <div class="mb-3 p-3 border rounded bg-light">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <strong>Purge everything</strong>
+                <div class="text-muted small">Deletes every suggestion and every vote. Cannot be undone.</div>
+            </div>
+            @if (!purgeConfirmArmed)
+            {
+                <button class="btn btn-outline-danger btn-sm" disabled="@busy" @onclick="() => purgeConfirmArmed = true">
+                    Purge all
+                </button>
+            }
+            else
+            {
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-danger" disabled="@busy" @onclick="PurgeAllAsync">Really purge everything</button>
+                    <button class="btn btn-outline-secondary" disabled="@busy" @onclick="() => purgeConfirmArmed = false">Cancel</button>
+                </div>
+            }
+        </div>
+        @if (lastPurge is not null)
+        {
+            <div class="alert alert-info mt-3 mb-0">
+                Purged @lastPurge.DeletedSuggestions suggestion(s) and @lastPurge.DeletedVotes vote(s).
+            </div>
+        }
+    </div>
+
+    @if (items is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else if (items.Count == 0)
+    {
+        <p><em>No submissions.</em></p>
+    }
+    else
+    {
+        <p class="text-muted">@items.Count total</p>
+        <ul class="list-group">
+            @foreach (var item in items)
+            {
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="me-3">
+                        <div class="mb-1">
+                            @StatusBadge(item.Status)
+                            <span class="ms-1">@item.Text</span>
+                        </div>
+                        <small class="text-muted">
+                            @(item.AuthorName ?? "anonymous") · @item.SubmittedAtUtc.ToLocalTime().ToString("g")
+                        </small>
+                    </div>
+                    <button class="btn btn-outline-danger btn-sm"
+                            disabled="@busy"
+                            @onclick="() => DeleteAsync(item.Id)">
+                        Delete
+                    </button>
+                </li>
+            }
+        </ul>
+    }
+}
+
+@if (error is not null)
+{
+    <div class="alert alert-danger mt-3">@error</div>
+}
+
+@code {
+    private IReadOnlyList<Suggestion>? items;
+    private bool allowed = true;
+    private bool busy;
+    private bool purgeConfirmArmed;
+    private PurgeAllResponse? lastPurge;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var self = await Api.GetSelfAsync();
+        if (!self.IsAdmin)
+        {
+            allowed = false;
+            return;
+        }
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        try
+        {
+            items = await Api.ListAllSuggestionsAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            items = [];
+        }
+    }
+
+    private async Task DeleteAsync(Guid id)
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            await Api.DeleteSuggestionAsync(id);
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task PurgeAllAsync()
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            lastPurge = await Api.PurgeAllAsync();
+            purgeConfirmArmed = false;
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private static RenderFragment StatusBadge(SuggestionStatus status) => builder =>
+    {
+        var (cls, label) = status switch
+        {
+            SuggestionStatus.Pending  => ("bg-warning text-dark", "pending"),
+            SuggestionStatus.Approved => ("bg-success",           "approved"),
+            SuggestionStatus.Rejected => ("bg-secondary",          "rejected"),
+            _                          => ("bg-light text-dark",   status.ToString()),
+        };
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class", $"badge {cls}");
+        builder.AddContent(2, label);
+        builder.CloseElement();
+    };
+}

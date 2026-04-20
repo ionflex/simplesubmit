@@ -76,6 +76,50 @@ public sealed class TableSuggestionStore : ISuggestionStore
         return ToDomain(entity);
     }
 
+    public async Task<IReadOnlyList<Suggestion>> ListAllAsync(CancellationToken ct)
+    {
+        var filter = $"PartitionKey eq '{PartitionKey}'";
+        var results = new List<Suggestion>();
+        await foreach (var entity in _table.QueryAsync<SuggestionEntity>(filter: filter, cancellationToken: ct))
+        {
+            results.Add(ToDomain(entity));
+        }
+        results.Sort((a, b) => b.SubmittedAtUtc.CompareTo(a.SubmittedAtUtc));
+        return results;
+    }
+
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken ct)
+    {
+        try
+        {
+            await _table.DeleteEntityAsync(PartitionKey, id.ToString("N"), ETag.All, ct);
+            return true;
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            return false;
+        }
+    }
+
+    public async Task<int> DeleteAllAsync(CancellationToken ct)
+    {
+        var filter = $"PartitionKey eq '{PartitionKey}'";
+        var removed = 0;
+        await foreach (var entity in _table.QueryAsync<SuggestionEntity>(filter: filter, select: ["PartitionKey", "RowKey"], cancellationToken: ct))
+        {
+            try
+            {
+                await _table.DeleteEntityAsync(entity.PartitionKey, entity.RowKey, ETag.All, ct);
+                removed++;
+            }
+            catch (RequestFailedException ex) when (ex.Status == 404)
+            {
+                // Already gone; skip.
+            }
+        }
+        return removed;
+    }
+
     public async Task<int> PurgeRejectedOlderThanAsync(TimeSpan age, CancellationToken ct)
     {
         var cutoff = DateTimeOffset.UtcNow - age;

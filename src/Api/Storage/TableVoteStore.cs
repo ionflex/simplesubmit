@@ -104,5 +104,42 @@ public sealed class TableVoteStore : IVoteStore
         return voted;
     }
 
+    public async Task<int> DeleteAllForSuggestionAsync(Guid suggestionId, CancellationToken ct)
+    {
+        var filter = $"PartitionKey eq '{PartitionKeyOf(suggestionId)}'";
+        var removed = 0;
+        await foreach (var entity in _table.QueryAsync<TableEntity>(filter: filter, select: ["PartitionKey", "RowKey"], cancellationToken: ct))
+        {
+            try
+            {
+                await _table.DeleteEntityAsync(entity.PartitionKey, entity.RowKey, ETag.All, ct);
+                removed++;
+            }
+            catch (RequestFailedException ex) when (ex.Status == 404)
+            {
+                // Already gone; skip.
+            }
+        }
+        return removed;
+    }
+
+    public async Task<int> DeleteAllAsync(CancellationToken ct)
+    {
+        var removed = 0;
+        await foreach (var entity in _table.QueryAsync<TableEntity>(select: ["PartitionKey", "RowKey"], cancellationToken: ct))
+        {
+            try
+            {
+                await _table.DeleteEntityAsync(entity.PartitionKey, entity.RowKey, ETag.All, ct);
+                removed++;
+            }
+            catch (RequestFailedException ex) when (ex.Status == 404)
+            {
+                // Already gone; skip.
+            }
+        }
+        return removed;
+    }
+
     private static string PartitionKeyOf(Guid suggestionId) => suggestionId.ToString("N");
 }
