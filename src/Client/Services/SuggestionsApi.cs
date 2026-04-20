@@ -5,9 +5,9 @@ namespace SimpleSubmit.Client.Services;
 
 public sealed class SuggestionsApi(HttpClient http)
 {
-    public async Task<IReadOnlyList<Suggestion>> ListAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<SuggestionListItem>> ListAsync(CancellationToken ct = default)
     {
-        var items = await http.GetFromJsonAsync<Suggestion[]>("api/suggestions", ct);
+        var items = await http.GetFromJsonAsync<SuggestionListItem[]>("api/suggestions", ct);
         return items ?? [];
     }
 
@@ -17,5 +17,14 @@ public sealed class SuggestionsApi(HttpClient http)
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<SubmitSuggestionResponse>(ct);
         return body ?? throw new InvalidOperationException("Empty response from submit endpoint.");
+    }
+
+    public async Task<VoteResponse?> VoteAsync(Guid id, bool voted, CancellationToken ct = default)
+    {
+        var method = voted ? HttpMethod.Post : HttpMethod.Delete;
+        using var request = new HttpRequestMessage(method, $"api/suggestions/{id}/vote");
+        using var response = await http.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<VoteResponse>(ct);
     }
 }

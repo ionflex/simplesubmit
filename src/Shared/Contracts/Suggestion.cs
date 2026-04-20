@@ -17,6 +17,16 @@ public sealed record Suggestion
     DateTimeOffset? ModeratedAtUtc
 );
 
+public sealed record SuggestionListItem
+(
+    Guid Id,
+    string Text,
+    string? AuthorName,
+    DateTimeOffset SubmittedAtUtc,
+    int VoteCount,
+    bool HasVoted
+);
+
 public sealed record SubmitSuggestionRequest
 (
     string Text,
@@ -26,6 +36,13 @@ public sealed record SubmitSuggestionRequest
 public sealed record SubmitSuggestionResponse
 (
     Guid Id
+);
+
+public sealed record VoteResponse
+(
+    Guid SuggestionId,
+    int VoteCount,
+    bool HasVoted
 );
 
 public sealed record PurgeRejectedResponse

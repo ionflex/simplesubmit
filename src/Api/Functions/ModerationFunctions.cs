@@ -16,44 +16,6 @@ public sealed class ModerationFunctions
 {
     private const int DefaultPurgeAgeDays = 30;
 
-    [Function("DiagWhoAmI")]
-    public IResult DiagWhoAmI
-    (
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "_diag/whoami")] HttpRequest req
-    )
-    {
-        var isAdmin = admin.IsAdmin(req.HttpContext);
-        var principalHeader = req.Headers.TryGetValue("x-ms-client-principal", out var values)
-            ? values.ToString()
-            : null;
-        return Results.Ok(new
-        {
-            IsAdmin = isAdmin,
-            HasPrincipalHeader = !string.IsNullOrEmpty(principalHeader),
-            AdminPrincipalIdConfigured = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ADMIN_PRINCIPAL_ID")),
-        });
-    }
-
-    [Function("DiagPendingCount")]
-    public async Task<IResult> DiagPendingCount
-    (
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "_diag/pending-count")] HttpRequest req,
-        CancellationToken ct
-    )
-    {
-        var items = await store.ListByStatusAsync(SuggestionStatus.Pending, ct);
-        return Results.Ok(new { count = items.Count });
-    }
-
-    [Function("DiagPurgeAccess")]
-    public IResult DiagPurgeAccess
-    (
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "_diag/purge-access")] HttpRequest req
-    )
-    {
-        return Results.Ok(new { reachable = true });
-    }
-
     [Function("ListPending")]
     public async Task<IResult> ListPendingAsync
     (

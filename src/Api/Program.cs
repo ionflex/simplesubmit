@@ -23,10 +23,12 @@ if (!string.IsNullOrWhiteSpace(storageConnection))
 {
     builder.Services.AddSingleton(_ => new TableServiceClient(storageConnection));
     builder.Services.AddSingleton<ISuggestionStore, TableSuggestionStore>();
+    builder.Services.AddSingleton<IVoteStore, TableVoteStore>();
 }
 else
 {
     builder.Services.AddSingleton<ISuggestionStore, InMemorySuggestionStore>();
+    builder.Services.AddSingleton<IVoteStore, InMemoryVoteStore>();
 }
 
 builder.Build().Run();

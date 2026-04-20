@@ -11,6 +11,7 @@ public sealed class SuggestionsFunctions
 (
     ISubmitterIdentity identity,
     ISuggestionStore store,
+    IVoteStore votes,
     ILogger<SuggestionsFunctions> logger
 )
 {
@@ -61,8 +62,71 @@ public sealed class SuggestionsFunctions
         CancellationToken ct
     )
     {
-        _ = await identity.GetOrCreateAsync(req.HttpContext);
-        var items = await store.ListByStatusAsync(SuggestionStatus.Approved, ct);
+        var submitter = await identity.GetOrCreateAsync(req.HttpContext);
+        var approved = await store.ListByStatusAsync(SuggestionStatus.Approved, ct);
+        var ids = approved.Select(s => s.Id).ToArray();
+        var counts = await votes.GetCountsAsync(ids, ct);
+        var voted = await votes.GetVotedAsync(submitter, ids, ct);
+
+        var items = approved
+            .Select(s => new SuggestionListItem
+            (
+                Id: s.Id,
+                Text: s.Text,
+                AuthorName: s.AuthorName,
+                SubmittedAtUtc: s.SubmittedAtUtc,
+                VoteCount: counts.GetValueOrDefault(s.Id),
+                HasVoted: voted.Contains(s.Id)
+            ))
+            .OrderByDescending(i => i.VoteCount)
+            .ThenByDescending(i => i.SubmittedAtUtc)
+            .ToArray();
+
         return Results.Ok(items);
+    }
+
+    [Function("Vote")]
+    public async Task<IResult> VoteAsync
+    (
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "suggestions/{id:guid}/vote")] HttpRequest req,
+        Guid id,
+        CancellationToken ct
+    )
+    {
+        return await ToggleVoteAsync(req, id, addVote: true, ct);
+    }
+
+    [Function("Unvote")]
+    public async Task<IResult> UnvoteAsync
+    (
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "suggestions/{id:guid}/vote")] HttpRequest req,
+        Guid id,
+        CancellationToken ct
+    )
+    {
+        return await ToggleVoteAsync(req, id, addVote: false, ct);
+    }
+
+    private async Task<IResult> ToggleVoteAsync(HttpRequest req, Guid id, bool addVote, CancellationToken ct)
+    {
+        var suggestion = await store.GetAsync(id, ct);
+        if (suggestion is null || suggestion.Status != SuggestionStatus.Approved)
+        {
+            return Results.NotFound();
+        }
+
+        var submitter = await identity.GetOrCreateAsync(req.HttpContext);
+
+        if (addVote)
+        {
+            await votes.AddAsync(id, submitter, ct);
+        }
+        else
+        {
+            await votes.RemoveAsync(id, submitter, ct);
+        }
+
+        var count = await votes.CountAsync(id, ct);
+        return Results.Ok(new VoteResponse(id, count, addVote));
     }
 }
