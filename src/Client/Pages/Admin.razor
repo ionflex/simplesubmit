@@ -40,10 +40,10 @@
         break;
 
     case State.Admin:
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <span>Signed in as <strong>@(self?.DisplayName ?? "unknown")</strong> (@self?.IdentityProvider)</span>
-            <div>
-                <a class="btn btn-outline-primary btn-sm me-2" href="/admin/submissions">Manage submissions</a>
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-3 gap-2">
+            <div>Signed in as <strong>@(self?.DisplayName ?? "unknown")</strong> (@self?.IdentityProvider)</div>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-outline-primary btn-sm" href="/admin/submissions">Manage submissions</a>
                 <a class="btn btn-outline-secondary btn-sm" href="/.auth/logout">Sign out</a>
             </div>
         </div>
@@ -59,14 +59,14 @@
             <ul class="list-group mb-4">
                 @foreach (var item in pending)
                 {
-                    <li class="list-group-item d-flex justify-content-between align-items-start">
-                        <div class="me-3">
+                    <li class="list-group-item d-flex flex-column flex-sm-row justify-content-between align-items-start gap-2">
+                        <div class="flex-grow-1 text-break">
                             <div>@item.Text</div>
                             <small class="text-muted">
                                 @(item.AuthorName ?? "anonymous") · @item.SubmittedAtUtc.ToLocalTime().ToString("g")
                             </small>
                         </div>
-                        <div class="btn-group btn-group-sm" role="group">
+                        <div class="btn-group btn-group-sm align-self-end align-self-sm-start flex-shrink-0" role="group">
                             <button class="btn btn-success" disabled="@busy" @onclick="() => ApproveSuggestionAsync(item.Id)">Approve</button>
                             <button class="btn btn-danger" disabled="@busy" @onclick="() => RejectSuggestionAsync(item.Id)">Reject</button>
                         </div>
@@ -85,8 +85,8 @@
             <ul class="list-group mb-4">
                 @foreach (var a in admins)
                 {
-                    <li class="list-group-item d-flex justify-content-between align-items-start">
-                        <div class="me-3">
+                    <li class="list-group-item d-flex flex-column flex-sm-row justify-content-between align-items-start gap-2">
+                        <div class="flex-grow-1 text-break">
                             <div>
                                 <strong>@a.DisplayName</strong>
                                 @if (a.IsBootstrap)
@@ -102,9 +102,9 @@
                                     <span class="badge bg-success ms-1">active</span>
                                 }
                             </div>
-                            <small class="text-muted font-monospace">@a.IdentityProvider · @a.PrincipalId</small>
+                            <small class="text-muted font-monospace text-break">@a.IdentityProvider · @a.PrincipalId</small>
                         </div>
-                        <div class="btn-group btn-group-sm" role="group">
+                        <div class="btn-group btn-group-sm align-self-end align-self-sm-start flex-shrink-0" role="group">
                             @if (!a.IsBootstrap && a.Status == AdminStatus.Pending)
                             {
                                 <button class="btn btn-success" disabled="@busy" @onclick="() => ApproveAdminAsync(a.PrincipalId)">Approve</button>
