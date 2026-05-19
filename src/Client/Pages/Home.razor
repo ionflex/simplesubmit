@@ -31,7 +31,7 @@
 
 @if (items is not null && (pendingCount > 0 || items.Count > 0))
 {
-    <div class="d-flex justify-content-between align-items-center mb-2">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
         <small class="text-muted">
             @if (pendingCount > 0)
             {
@@ -69,14 +69,14 @@ else
     <ul class="list-group">
         @foreach (var item in Sorted(items))
         {
-            <li class="list-group-item d-flex justify-content-between align-items-start">
-                <div class="me-3">
+            <li class="list-group-item d-flex flex-column flex-sm-row justify-content-between align-items-start gap-2">
+                <div class="flex-grow-1 text-break">
                     <div>@item.Text</div>
                     <small class="text-muted">
                         @(item.AuthorName ?? "anonymous") · @item.SubmittedAtUtc.ToLocalTime().ToString("g")
                     </small>
                 </div>
-                <button class="btn @(item.HasVoted ? "btn-primary" : "btn-outline-primary") btn-sm"
+                <button class="btn @(item.HasVoted ? "btn-primary" : "btn-outline-primary") btn-sm align-self-end align-self-sm-start flex-shrink-0"
                         disabled="@busy"
                         title="@(item.HasVoted ? "Remove your vote" : "Vote for this")"
                         @onclick="() => ToggleVoteAsync(item)">

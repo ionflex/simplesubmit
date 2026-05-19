@@ -4,9 +4,9 @@
 
 <PageTitle>SimpleSubmit · Admin · Submissions</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-3 gap-2">
     <h1 class="mb-0">All submissions</h1>
-    <a class="btn btn-outline-secondary btn-sm" href="/admin">Back to admin</a>
+    <a class="btn btn-outline-secondary btn-sm align-self-end align-self-sm-auto" href="/admin">Back to admin</a>
 </div>
 
 @if (!allowed)
@@ -59,8 +59,8 @@ else
         <ul class="list-group">
             @foreach (var item in items)
             {
-                <li class="list-group-item d-flex justify-content-between align-items-start">
-                    <div class="me-3">
+                <li class="list-group-item d-flex flex-column flex-sm-row justify-content-between align-items-start gap-2">
+                    <div class="flex-grow-1 text-break">
                         <div class="mb-1">
                             @StatusBadge(item.Status)
                             <span class="ms-1">@item.Text</span>
@@ -69,7 +69,7 @@ else
                             @(item.AuthorName ?? "anonymous") · @item.SubmittedAtUtc.ToLocalTime().ToString("g")
                         </small>
                     </div>
-                    <button class="btn btn-outline-danger btn-sm"
+                    <button class="btn btn-outline-danger btn-sm align-self-end align-self-sm-start flex-shrink-0"
                             disabled="@busy"
                             @onclick="() => DeleteAsync(item.Id)">
                         Delete

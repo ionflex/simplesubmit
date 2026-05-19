@@ -1,0 +1,9 @@
+{
+  "$schema": "https://aka.ms/azure/static-web-apps-cli-schema",
+  "configurations": {
+    "simplesubmit": {
+      "appDevserverUrl": "http://localhost:5119",
+      "apiDevserverUrl": "http://localhost:7236"
+    }
+  }
+}
